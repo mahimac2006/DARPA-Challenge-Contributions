@@ -93,14 +93,3 @@ stop at WMI-1 and never reach WMI-3 or WMI-4. The fix was to replace the
 intermediate assertion with `klee_warning`, which logs the detection without
 killing the path. The final WMI-4 assertion remains as `klee_assert`.
 
-The io_uring harness initially checked the wrong node (a cached node instead
-of the current node that was retrieved from cache with stale data). The
-assertion was firing on a node that had file_b, not the one with the evil
-file. This was fixed to check `current_rsrc_node` which actually holds the
-stale `item.file` pointer from its previous cache cycle.
-
-The netfilter harness initially always took the path where the gc_seq check
-caught the race (which is what happens in the non-buggy case). A symbolic
-choice was added to model the TOCTOU gap where gc_seq gets bumped twice
-(returning to the original value), causing the check to miss the race.
-
