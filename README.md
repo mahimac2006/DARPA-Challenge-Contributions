@@ -5,9 +5,7 @@
 
 ---
 
-## Methodology
-
-### Phase 1: Initial Prompt & Understanding the Task
+### Initial Prompt & Understanding the Task
 
 My first prompt to the LLM (I used the Opus 4.6 model on Cursor):
 > For this challenge, focus on the following Linux kernel modules:
@@ -25,7 +23,7 @@ I also provided the exploitation chain:
 
 ---
 
-### Phase 2: How the LLM Found WMI Patterns
+### How the LLM Found WMI Patterns
 
 Once the WMI model was clear, the LLM launched parallel searches across all three modules 
 simultaneously, looking for vulnerability patterns matching WMI-1 through WMI-4.
@@ -60,7 +58,7 @@ clearing a back-pointer when `to_proc` is NULL, this gives a full chain.
 
 ---
 
-### Phase 3: How the Harnesses Were Written
+### How the Harnesses Were Written
 
 The harnesses are modeled after the structure of the original WMI sample:
 
