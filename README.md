@@ -9,7 +9,7 @@
 
 ### Phase 1: Initial Prompt & Understanding the Task
 
-My first prompt to the LLM:
+My first prompt to the LLM (I used the Opus 4.6 model on Cursor):
 > For this challenge, focus on the following Linux kernel modules:
 > - netfilter
 > - io_uring
