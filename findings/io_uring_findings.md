@@ -13,7 +13,7 @@ temporarily, creating a window where in-flight operations can get confused.
 
 ---
 
-## Finding IU-1: Recycled Resource Nodes Keep Old Pointers
+## Finding 1: Recycled Resource Nodes Keep Old Pointers
 
 **WMI types**: WMI-2 (info leak / type confusion), WMI-4 (function pointer hijack)
 
@@ -62,7 +62,7 @@ most nodes in practice are recycled.
 
 ---
 
-## Finding IU-2: Lock Gets Dropped During File Unregistration
+## Finding 2: Lock Gets Dropped During File Unregistration
 
 **WMI types**: WMI-1 (stale pointer)
 
@@ -93,7 +93,7 @@ it's now holding a pointer to a node that's about to be destroyed.
 
 ---
 
-## Finding IU-3: Recycled Requests Keep Old Operation Data
+## Finding 3: Recycled Requests Keep Old Operation Data
 
 **WMI types**: WMI-2 (data leak across operations), WMI-4 (stale function pointers)
 
@@ -122,7 +122,7 @@ survives.
 
 ---
 
-## Finding IU-4: Resource Node Ref Count Race During File Updates
+## Finding 4: Resource Node Ref Count Race During File Updates
 
 **WMI types**: WMI-1 (stale pointer), WMI-3 (arbitrary fput)
 
