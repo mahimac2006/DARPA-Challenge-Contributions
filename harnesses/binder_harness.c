@@ -318,7 +318,11 @@ int main(void) {
     printf("  buffer->transaction = %p (DANGLING — freed memory!)\n\n",
            (void*)buffer->transaction);
 
-    SYM_ASSERT(buffer->transaction == NULL); /* Should fail — this IS the bug */
+    if (buffer->transaction != NULL) {
+        printf("[WMI-1 CONFIRMED] buffer->transaction is dangling at %p\n",
+               (void*)buffer->transaction);
+        klee_warning("WMI-1: buffer->transaction not cleared after free");
+    }
 
     /* === PHASE 5: Slab reclamation — type confusion (WMI-2 cont'd) === */
     printf("=== PHASE 5: Slab Reclamation — Type Confusion (WMI-2) ===\n");
