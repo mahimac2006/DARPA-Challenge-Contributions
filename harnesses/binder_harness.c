@@ -320,10 +320,6 @@ int main(void) {
 
     SYM_ASSERT(buffer->transaction == NULL); /* Should fail — this IS the bug */
 
-    /* Symbolic choice: does attacker exploit the dangling pointer? */
-    int exploit = SYM_INT("exploit");
-    SYM_ASSUME(exploit == 1);
-
     /* === PHASE 5: Slab reclamation — type confusion (WMI-2 cont'd) === */
     printf("=== PHASE 5: Slab Reclamation — Type Confusion (WMI-2) ===\n");
 
