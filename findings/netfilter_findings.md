@@ -14,7 +14,7 @@ try to touch the same element at the same time, bad things happen.
 
 ---
 
-## Finding NF-1: GC Worker Races with Element Deletion
+## Finding 1: GC Worker Races with Element Deletion
 
 **WMI types**: WMI-1 (stale pointer), WMI-3 (double free), WMI-4 (function pointer hijack)
 
@@ -53,7 +53,7 @@ This pattern is the root cause of real-world CVEs: CVE-2023-4244, CVE-2024-1085,
 
 ---
 
-## Finding NF-2: Pipapo GC Hardcodes Sequence Number to Zero
+## Finding 2: Pipapo GC Hardcodes Sequence Number to Zero
 
 **WMI types**: WMI-1 (stale pointer), WMI-2 (info leak via type confusion)
 
@@ -86,7 +86,7 @@ references the freed elements until the swap happens.
 
 ---
 
-## Finding NF-3: Catchall GC Forgets to Clean Up the Container
+## Finding 3: Catchall GC Forgets to Clean Up the Container
 
 **WMI types**: WMI-1 (stale pointer), WMI-3 (arbitrary free)
 
