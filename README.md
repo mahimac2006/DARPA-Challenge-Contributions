@@ -3,14 +3,6 @@
 - **io_uring** (resource node lifecycle, request recycling)
 - **binder** (transaction/buffer lifecycle, custom modifications)
 
-## WMI Primitive Definitions (from Sample)
-| Primitive | Description |
-|-----------|-------------|
-| **WMI-1** | Stale Reference (UAF) -- object freed while another object still holds a pointer |
-| **WMI-2** | Type Confusion Leak -- freed memory reclaimed by different type, read through stale ref |
-| **WMI-3** | Arbitrary Free -- stale/confused reference triggers `kfree()` on controlled address |
-| **WMI-4** | Write-What-Where -- reclaim freed memory to overwrite function pointers / critical data |
-
 ---
 
 ## Methodology
@@ -18,7 +10,7 @@
 ### Phase 1: Initial Prompt & Understanding the Task
 
 My first prompt to the LLM:
-> For this challenge, we'll be focusing on the following Linux kernel modules:
+> For this challenge, focus on the following Linux kernel modules:
 > - netfilter
 > - io_uring
 > - binder
@@ -129,7 +121,3 @@ choice was added to model the TOCTOU gap where gc_seq gets bumped twice
    no-ops in the harnesses, since the symbolic engine explores all paths
 4. **Focused scope**: Each harness covers one specific bug path, not the
    entire module
-5. **LLM-driven analysis**: The vulnerability identification was done by an
-   LLM reading source code, not by manual auditing or dynamic analysis.
-   The findings are based on code patterns and known vulnerability classes,
-   not on confirmed exploitation.
