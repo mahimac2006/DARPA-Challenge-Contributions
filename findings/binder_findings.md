@@ -226,30 +226,43 @@ STEP 5: Code execution
 
 ## KLEE Results
 
-Running the binder harness through KLEE confirms the WMI-1 dangling pointer
-bug. KLEE generated 1 test case and the assertion proves `buffer->transaction`
-is not NULL after the transaction is freed:
+Running the binder harness through KLEE confirms the complete WMI-1 through
+WMI-4 exploitation chain. KLEE executed the full chain from stale reference
+to code execution:
 
 ```
+=== PHASE 3: Thread Exit — Create Stale Reference (WMI-1) ===
+[THREAD_EXIT] Set to_proc=NULL, to_thread=NULL
+[WMI-1] buffer->transaction (0x7ef9d4c00000) NOT cleared!
+
 === PHASE 4: Free Transaction — Dangling Pointer Created (WMI-1) ===
-[FREE_TXN] Freeing transaction 0x774298000000 (to_proc=(nil))
 [FREE_TXN] to_proc is NULL — SKIPPING buffer->transaction = NULL
 [WMI-1 BUG] buffer->transaction will be left dangling!
-[FREE_TXN] Transaction freed to slab
-[STATE] After binder_free_transaction:
-  buffer->transaction = 0x774298000000 (DANGLING — freed memory!)
+[WMI-1 CONFIRMED] buffer->transaction is dangling at 0x7ef9d4c00000
+KLEE: WARNING: WMI-1: buffer->transaction not cleared after free
 
-KLEE: ERROR: harnesses/binder_harness.c:321: ASSERTION FAIL: buffer->transaction == ((void*)0)
-KLEE: NOTE: now ignoring this error at this location
+=== PHASE 5: Slab Reclamation — Type Confusion (WMI-2) ===
+[RECLAIM] Allocated fake_txn at 0x7ef9d4c00000 (SAME ADDRESS as freed txn!)
 
-KLEE: done: total instructions = 3594
+=== PHASE 6: Arbitrary Free via segm (WMI-3) ===
+[FREE_BUF] kfree(buffer->segm) where segm=0x7fa8e4c00000
+[WMI-3] Freeing segm pointer — if controlled, this is ARBITRARY FREE
+
+=== PHASE 7: Write-What-Where via target_node (WMI-4) ===
+[WMI-4 DETECTED] target_node is corrupted/controlled!
+[WMI-4] Attacker-controlled ptr: 0x7fa68ec00000
+[WMI-4] Target function pointer overwritten: 0x7fa68ac00000 -> 0x7fa68ec00000
+[EXPLOITATION SUCCESS] PWND — code execution achieved!
+KLEE: ERROR: harnesses/binder_harness.c:407: ASSERTION FAIL: target_func_ptr == (uint64_t)(uintptr_t)lose_func
+
+KLEE: done: total instructions = 4845
 KLEE: done: completed paths = 0
 KLEE: done: partially completed paths = 1
 KLEE: done: generated tests = 1
 ```
 
-KLEE confirmed that when `binder_thread_release()` sets `to_proc = NULL`
-and `binder_free_transaction()` subsequently runs, the `if (target_proc)`
-check fails, skipping the `buffer->transaction = NULL` cleanup. The
-transaction is freed via `kfree(t)` but `buffer->transaction` still holds
-the old pointer -- a confirmed dangling reference (WMI-1).
+KLEE confirmed the full chain:
+- **WMI-1**: `binder_thread_release()` sets `to_proc = NULL`, `binder_free_transaction()` skips clearing `buffer->transaction`, leaving a dangling pointer
+- **WMI-2**: Slab reclamation returns the **exact same address** as the freed transaction, allowing attacker-controlled data to occupy that memory
+- **WMI-3**: The error path in `binder_free_buf_locked()` calls `kfree(buffer->segm)` on the attacker-controlled address
+- **WMI-4**: Corrupted `target_node` gives attacker arbitrary read/write, function pointer overwritten from `lose_func` to `win_func`, code execution achieved

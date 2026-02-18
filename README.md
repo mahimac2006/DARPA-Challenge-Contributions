@@ -93,11 +93,17 @@ allocation.
 
 ### What Each Harness Detects
 KLEE explores all symbolic paths and flags assertion violations:
-- **netfilter_harness**: Detects WMI-4 (function pointer hijack via GC race)
-- **io_uring_harness**: Detects WMI-2 (stale cache data) and WMI-4 (hijacked release)
-- **binder_harness**: Detects WMI-1 (dangling buffer->transaction pointer)
+- **netfilter_harness**: Detects WMI-1 through WMI-4 (GC race → slab reclaim → double free → function pointer hijack)
+- **io_uring_harness**: Detects WMI-2 (stale cache data leak) and WMI-4 (hijacked file release)
+- **binder_harness**: Detects WMI-1 through WMI-4 (dangling pointer → slab reclaim → arbitrary free via segm → write-what-where → code execution)
 
 ### Refinements During Development
+The binder harness originally used `klee_assert` for the intermediate WMI-1
+check. Since `klee_assert` **terminates the path** on failure, KLEE would
+stop at WMI-1 and never reach WMI-3 or WMI-4. The fix was to replace the
+intermediate assertion with `klee_warning`, which logs the detection without
+killing the path. The final WMI-4 assertion remains as `klee_assert`.
+
 The io_uring harness initially checked the wrong node (a cached node instead
 of the current node that was retrieved from cache with stale data). The
 assertion was firing on a node that had file_b, not the one with the evil

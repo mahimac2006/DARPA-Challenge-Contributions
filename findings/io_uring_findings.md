@@ -158,20 +158,34 @@ leak) and WMI-4 (function pointer hijack) are reachable. KLEE explored 1
 complete path and 1 partial path, generating 2 test cases:
 
 ```
+=== PHASE 2: File Update — Node Caching ===
+[REMOVAL] Capturing current node 0x77c96f600000 for removal
+[REMOVAL] Stashed file 0x77c56f600000 in old node, decrementing refs
+[REMOVAL] Refs hit zero, processing immediately
+[PUT_WORK] Calling fput on file 0x77c56f600000 (magic=0xf11ef11e)
+[EFFECT] normal_release called — safe fput
+[CACHE] Node 0x77c96f600000 placed in cache (item.rsrc=0x77c56f600000, type=0)
+
+=== PHASE 3: Second Update — Cache Retrieval (WMI-2) ===
+[CACHE] Retrieved node 0x77c96f600000 from cache
+  [STALE] item.rsrc = 0x77c56f600000 (NOT CLEARED)
+  [STALE] type = 0 (NOT CLEARED)
+
+=== PHASE 4: Exploiting Stale Cache Data ===
+[ATTACKER] Reclaimed file_a slab with evil_file at 0x77c56f600000
+[ATTACKER] Set f_op_release to hijacked_release (0x7881f5600000)
+
 === PHASE 5: Process Current Node (WMI-4) ===
-[NODE] Current node type=0, item.rsrc=0x723a19600000
+[NODE] Current node type=0, item.rsrc=0x77c56f600000
 [WMI-2 DETECTED] Current node's stale item.file points to reclaimed memory!
 [TYPE CONFUSION] Node was cached with old file ptr, now has evil_file
 [LEAK] private_data via stale ref: 0xdeadbeefdeadbeef
-[CACHED] Cached node has type=0, item.file=0x724219600000
 
 [ACTION] Processing stale node as if refs hit zero...
-[PUT_WORK] Processing node 0x723e19600000 (type=0)
-[PUT_WORK] Calling fput on file 0x723a19600000 (magic=0x57494e21)
+[PUT_WORK] Calling fput on file 0x77c56f600000 (magic=0x57494e21)
 [WMI-4 DETECTED] File release function hijacked!
 [EXPLOITATION SUCCESS] hijacked_release called — attacker controls fput!
 KLEE: ERROR: harnesses/io_uring_harness.c:291: ASSERTION FAIL: stale_node->item.file == ((void*)0) || stale_node->item.file->f_op_release != hijacked_release
-KLEE: NOTE: now ignoring this error at this location
 
 KLEE: done: total instructions = 1904
 KLEE: done: completed paths = 1
@@ -179,8 +193,6 @@ KLEE: done: partially completed paths = 1
 KLEE: done: generated tests = 2
 ```
 
-KLEE confirmed that a cached node retains a stale `item.file` pointer from
-its previous lifecycle. After the file is freed and reclaimed with attacker
-data (`0xdeadbeefdeadbeef` leaked via type confusion), `io_rsrc_put_work()`
-calls `fput()` on the stale pointer, which invokes the attacker's
-`hijacked_release` function -- confirming WMI-2 and WMI-4.
+KLEE confirmed the full chain:
+- **WMI-2**: A cached node retains a stale `item.file` pointer (`0x77c56f600000`) from its previous lifecycle. The `item.rsrc` and `type` fields are **NOT CLEARED** on cache retrieval. After the file is freed and reclaimed with attacker data, reading through the stale pointer leaks `0xdeadbeefdeadbeef` (type confusion).
+- **WMI-4**: `io_rsrc_put_work()` calls `fput()` on the stale pointer, which invokes the attacker's `hijacked_release` function -- code execution achieved.

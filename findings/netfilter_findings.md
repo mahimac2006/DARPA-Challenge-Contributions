@@ -115,14 +115,40 @@ operation), it follows the dangling `->elem` pointer into freed memory.
 
 ## KLEE Results
 
-Running the netfilter harness through KLEE confirms the WMI-4 function pointer
-hijack is reachable. KLEE explored 3 complete paths and 1 partial path,
-generating 4 test cases. The assertion violation proves the exploit path exists:
+Running the netfilter harness through KLEE confirms the full WMI chain.
+KLEE explored 3 complete paths and 1 partial path, generating 4 test cases.
+The key exploit path shows all stages:
 
 ```
+=== PHASE 1: GC Worker Iteration (WMI-1 Setup) ===
+[GC] Worker starts, gc_seq=0
+[GC] Marked element 0 dead
+[GC] Collected element 0 (ptr=0x70fe2b800000) into trans batch
+[GC] Worker collected 1 elements, returning to workqueue
+
+=== PHASE 2: Userspace Delsetelem Race (WMI-1) ===
+[USER] Deleting set element 0
+[GC_WORK] Acquiring commit_mutex...
+[GC_WORK] TOCTOU: gc_seq bumped twice, check MISSED the race!
+[USER] Element deactivated and removed from set
+[USER] Freeing element at 0x70fe2b800000 via call_rcu path
+[FREE] Element freed to slab cache
+[GC_WORK] Deactivating element at 0x70fe2b800000 (magic=0xa1a1a1a1)
+
+=== PHASE 3: Slab Reclamation — Type Confusion (WMI-2) ===
+[RECLAIM] Got allocation at 0x70fe2b800000 (SAME ADDRESS as freed element!)
+[RECLAIM] Filled reclaimed memory with controlled data
+[RECLAIM] Set ops->eval to win_eval (0x71a6b1800000)
+
+=== PHASE 4: GC Work Processes Stale Batch (WMI-3) ===
+[GC_WORK] Acquiring commit_mutex...
+[GC_WORK] TOCTOU: gc_seq bumped twice, check MISSED the race!
+[GC_WORK] Deactivating element at 0x70fe2b800000 (magic=0x42424242)
+[WMI-3] GC work processed stale elements — double free possible!
+
 === PHASE 5: Packet Path Evaluation (WMI-4) ===
-[EVAL] Packet path evaluating expression via stale element at 0x734163000000
-[EVAL] ops = 0x72cfe3000000, ops->eval = 0x73e9e9000000
+[EVAL] Packet path evaluating expression via stale element at 0x70fe2b800000
+[EVAL] ops = 0x708cab800000, ops->eval = 0x71a6b1800000
 [WMI-4 DETECTED] Function pointer hijacked!
 [EXPLOITATION SUCCESS] win_eval called — attacker hijacked control flow!
 KLEE: ERROR: harnesses/netfilter_harness.c:319: ASSERTION FAIL: stale->ops->marker != 0x57494E21
@@ -134,7 +160,8 @@ KLEE: done: partially completed paths = 1
 KLEE: done: generated tests = 4
 ```
 
-KLEE found that when the TOCTOU race is exploited (gc_seq bumped twice,
-returning to the original value), the GC processes stale element pointers.
-After slab reclamation, the attacker-controlled `ops->eval` function pointer
-is called, confirming WMI-4.
+KLEE confirmed the full chain:
+- **WMI-1**: GC worker collects a pointer to an element that userspace deletes and frees
+- **WMI-2**: Slab reclamation returns the **exact same address** (`0x70fe2b800000`), attacker fills it with controlled data
+- **WMI-3**: GC work processes the stale batch, operating on attacker-controlled memory (double free)
+- **WMI-4**: Packet path calls `ops->eval` through the corrupted element, jumping to `win_eval` -- function pointer hijacked
