@@ -17,7 +17,7 @@ My first prompt to the LLM (I used the Opus 4.6 model on Cursor):
 >
 > Identify potential Sample3 WMIs in these modules and write symbolic execution harnesses to detect them.
 
-I also provided the WMI sample output showing the 4-stage exploitation chain:
+I also provided the exploitation chain:
 - WMI-1: Stale Reference (use-after-free)
 - WMI-2: Type Confusion Leak (read freed memory reclaimed by different type)
 - WMI-3: Arbitrary Free (kfree on attacker-controlled pointer)
