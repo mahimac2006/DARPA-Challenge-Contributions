@@ -17,7 +17,7 @@ WMI-1 through WMI-4 exploitation chain.
 
 ---
 
-## Finding BD-1: Custom Ioctl Leaks Buffer Addresses to Userspace
+## Finding 1: Custom Ioctl Leaks Buffer Addresses to Userspace
 
 **WMI type**: WMI-2 (information leak)
 
@@ -48,7 +48,7 @@ how big it is.
 
 ---
 
-## Finding BD-2: Transaction Freed but Buffer Still Points to It
+## Finding 2: Transaction Freed but Buffer Still Points to It
 
 **WMI type**: WMI-1 (stale pointer / use-after-free)
 
@@ -85,7 +85,7 @@ Here's the bug: when a **thread exits** while it has a pending transaction:
 
 ---
 
-## Finding BD-3: Error Path Frees Whatever `segm` Points To
+## Finding 3: Error Path Frees Whatever `segm` Points To
 
 **WMI type**: WMI-3 (arbitrary free)
 
@@ -129,7 +129,7 @@ pointing to freed memory, corrupting the allocator's internal state.
 
 ---
 
-## Finding BD-4: Corrupted Buffer Gives Attacker Read/Write
+## Finding 4: Corrupted Buffer Gives Attacker Read/Write
 
 **WMI type**: WMI-4 (write-what-where / arbitrary read)
 
@@ -168,7 +168,7 @@ controlled by the attacker. This is the textbook unlink write-what-where.
 
 ---
 
-## Finding BD-5: Cross-Process Dangling Node Reference
+## Finding 5: Cross-Process Dangling Node Reference
 
 **WMI type**: WMI-1 (stale pointer)
 
