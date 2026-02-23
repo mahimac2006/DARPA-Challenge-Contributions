@@ -41,23 +41,6 @@ race on `node->proc`, but that's actually serialized by `node->lock` so
 both code paths can't run at the same time. The LLM caught this itself when
 it re-read the source to verify.
 
-### What It Found
-
-**Netfilter** (3 findings): The nf_tables garbage collector runs without
-the main lock and can race with userspace element deletion. Related to real
-CVEs (CVE-2023-4244, CVE-2024-1085).
-
-**io_uring** (4 findings): Resource nodes get recycled through a cache
-without clearing old file pointers. Also, the main lock gets dropped during
-resource quiesce, creating a window for stale references.
-
-**Binder** (5 findings): This kernel tree has custom modifications (a new
-ioctl that leaks addresses, a `segm` field that gets kfree'd in an error
-path). Combined with an upstream bug where `binder_free_transaction()` skips
-clearing a back-pointer when `to_proc` is NULL, this gives a full chain.
-
----
-
 ### How the Harnesses Were Written
 
 The harnesses are modeled after the structure of the original WMI sample:
@@ -79,10 +62,9 @@ a simple pool where freed pointers are stored and returned on the next
 allocation.
 
 ### What Each Harness Detects
-KLEE explores all symbolic paths and flags assertion violations:
-- **netfilter_harness**: Detects WMI-1 through WMI-4 (GC race → slab reclaim → double free → function pointer hijack)
-- **io_uring_harness**: Detects WMI-2 (stale cache data leak) and WMI-4 (hijacked file release)
-- **binder_harness**: Detects WMI-1 through WMI-4 (dangling pointer → slab reclaim → arbitrary free via segm → write-what-where → code execution)
+- **netfilter_harness**: (3 findings) Detects WMI-1 through WMI-4 (GC race → slab reclaim → double free → function pointer hijack)
+- **io_uring_harness**: (4 findings) Detects WMI-2 (stale cache data leak) and WMI-4 (hijacked file release)
+- **binder_harness**: (5 findings) Detects WMI-1 through WMI-4 (dangling pointer → slab reclaim → arbitrary free via segm → write-what-where → code execution)
 
 ### Refinements During Development
 The binder harness originally used `klee_assert` for the intermediate WMI-1
