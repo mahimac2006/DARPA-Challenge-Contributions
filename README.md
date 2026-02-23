@@ -56,10 +56,8 @@ The harnesses are modeled after the structure of the original WMI sample:
 ```
 
 ### Slab Simulation
-The harnesses simulate the Linux SLUB allocator's behavior: after `free(p)`,
-a subsequent `malloc` of the same size may return `p`. This is modeled with
-a simple pool where freed pointers are stored and returned on the next
-allocation.
+In the real kernel, when you kfree() something, the allocator doesn't throw the memory away -- it puts it on a freelist. The next kmalloc() of the same size hands back the same address. That's how attackers reclaim freed memory with controlled data.
+The harnesses can't use the real kernel allocator, so they fake this with a simple pool. When you free a pointer, it goes into an array. When you allocate, it checks the array first and returns the same pointer. That's why KLEE's output shows "SAME ADDRESS as freed txn!"
 
 ### What Each Harness Detects
 - **netfilter_harness**: (3 findings) Detects WMI-1 through WMI-4 (GC race → slab reclaim → double free → function pointer hijack)
